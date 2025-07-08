@@ -1,0 +1,47 @@
+services:
+  analytics-api-backend:
+    image: analytics-api:v1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/code:rw
+    depends_on:
+      postgres_timescale_db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: rebuild
+          path: Dockerfile
+        - action: rebuild
+          path: requirements.txt
+        - action: rebuild
+          path: compose.yml
+        - action: rebuild
+          path: ./src/api
+          target: /code/api
+
+  postgres_timescale_db:
+    image: timescale/timescaledb:latest-pg17
+    environment:
+      - POSTGRES_USER=pguser
+      - POSTGRES_PASSWORD=secretpassword
+      - POSTGRES_DB=timescaledb
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pguser"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  timescaledb_data:
